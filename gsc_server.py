@@ -32,8 +32,26 @@ logging.getLogger("googleapiclient.discovery_cache").setLevel(logging.ERROR)
 
 # MCP
 from mcp.server.fastmcp import FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 
-mcp = FastMCP("gsc-server")
+# Stateless + JSON-response mode for the Streamable HTTP transport so the
+# server works under Vercel-style stateless serverless functions: each request
+# is fully independent (no session ID handshake), and the response is plain
+# JSON instead of an SSE event stream. These settings are ignored by the
+# stdio/SSE transports used in local mode.
+#
+# DNS-rebinding protection is also disabled: the server is fronted by Vercel
+# (HTTPS + the platform's Host validation) and gated by our own bearer token,
+# so the additional Host-header allowlist would just reject legitimate Claude
+# requests on every Vercel preview/custom domain.
+mcp = FastMCP(
+    "gsc-server",
+    stateless_http=True,
+    json_response=True,
+    transport_security=TransportSecuritySettings(
+        enable_dns_rebinding_protection=False,
+    ),
+)
 
 def _expand_path(path: Optional[str]) -> Optional[str]:
     """Expand ``~`` and environment variables in a path, returning None for empty input.

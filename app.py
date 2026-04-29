@@ -316,8 +316,76 @@ _HANDLED_PATHS = frozenset([
 
 
 class _App:
+    """Root ASGI app.
+
+    Routes /api/oauth/*, /api/accounts, /, /dashboard to the Starlette
+    sub-app. Everything else (/mcp, plus any other path) is forwarded to the
+    bearer-protected FastMCP Streamable HTTP app.
+
+    Vercel's Python runtime does not reliably emit ASGI ``lifespan`` events
+    for serverless functions, but FastMCP's StreamableHTTPSessionManager
+    requires its task group to be initialised by the lifespan startup hook —
+    otherwise the very first /mcp request fails with "Task group is not
+    initialized". We emulate the lifespan startup ourselves the first time
+    an HTTP request arrives, and keep the lifespan task running for the
+    process lifetime so the task group stays alive across warm invocations.
+    """
+
+    def __init__(self) -> None:
+        self._lifespan_started = False
+        self._lifespan_lock: asyncio.Lock | None = None
+        self._lifespan_task: asyncio.Task | None = None
+        # Used to keep lifespan running indefinitely in the background.
+        self._never_shutdown: asyncio.Event | None = None
+
+    async def _ensure_lifespan_started(self) -> None:
+        if self._lifespan_started:
+            return
+        # Lazy-init lock/event because they bind to the running event loop.
+        if self._lifespan_lock is None:
+            self._lifespan_lock = asyncio.Lock()
+        async with self._lifespan_lock:
+            if self._lifespan_started:
+                return
+            startup_complete: asyncio.Event = asyncio.Event()
+            self._never_shutdown = asyncio.Event()
+
+            async def fake_receive():
+                if not startup_complete.is_set():
+                    # Drive the inner app through startup the first time.
+                    return {"type": "lifespan.startup"}
+                # Block forever — never request shutdown so the task group
+                # in StreamableHTTPSessionManager.run() stays alive.
+                await self._never_shutdown.wait()
+                return {"type": "lifespan.shutdown"}
+
+            async def fake_send(message):
+                t = message.get("type")
+                if t in ("lifespan.startup.complete", "lifespan.startup.failed"):
+                    startup_complete.set()
+
+            async def runner():
+                try:
+                    await _mcp_inner(
+                        {"type": "lifespan", "asgi": {"version": "3.0"}},
+                        fake_receive,
+                        fake_send,
+                    )
+                except Exception:
+                    # Surface lifespan errors on the next request rather than
+                    # silently swallowing them.
+                    startup_complete.set()
+                    raise
+
+            self._lifespan_task = asyncio.create_task(runner())
+            await startup_complete.wait()
+            self._lifespan_started = True
+
     async def __call__(self, scope, receive, send):
         if scope["type"] == "lifespan":
+            # Some adapters DO emit lifespan; honour it and mark started so
+            # we don't double-init.
+            self._lifespan_started = True
             await _mcp_inner(scope, receive, send)
             return
         if scope["type"] == "http":
@@ -325,6 +393,8 @@ class _App:
             if path in _HANDLED_PATHS:
                 await _oauth_app(scope, receive, send)
                 return
+            # MCP path — make sure the session manager's task group is up.
+            await self._ensure_lifespan_started()
         await _mcp_protected(scope, receive, send)
 
 
