@@ -426,11 +426,15 @@ docker run \
 
 ### Vercel — Remote MCP for a Claude organization
 
-Deploy this server as a Vercel Function and register it as a custom MCP
+Deploy this server as a Vercel Python app and register it as a custom MCP
 connector in your Claude organization. Tokens for one or more linked Google
 accounts are stored in **Vercel KV (Upstash Redis)** and shared across the org —
 anyone with the connector can query GSC for any linked account, and anyone can
 add a new account by visiting the OAuth start URL.
+
+> **Branch**: Deploy from `claude/deploy-gsc-mcp-vercel-LGlPG` (contains `app.py`
+> and the `lib/` modules — **not** from `main`). In Vercel → Project Settings →
+> Git → Production Branch, set it to `claude/deploy-gsc-mcp-vercel-LGlPG`.
 
 **One-time external setup**
 
@@ -441,12 +445,12 @@ add a new account by visiting the OAuth start URL.
    - OAuth consent screen scope: `https://www.googleapis.com/auth/webmasters`.
    - While the app is in "Testing" status, add each Google email you'll link as a test user.
 2. **Vercel project**
-   - Import this repo into Vercel.
+   - Import this repo into Vercel (set production branch to `claude/deploy-gsc-mcp-vercel-LGlPG`).
    - Add the **Vercel KV** integration (auto-provisions `KV_REST_API_URL` and `KV_REST_API_TOKEN`).
    - Set the env vars in the table below and deploy.
 3. **Claude organization**
    - Admin → Connectors → Add custom MCP server.
-   - URL: `https://<your-vercel-domain>/api/mcp`
+   - URL: `https://<your-vercel-domain>/mcp`
    - Auth: bearer token = `MCP_BEARER_TOKEN`.
 
 **Required Vercel environment variables**
