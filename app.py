@@ -501,214 +501,49 @@ async def landing(request: Request):
 # ── Documentation page ────────────────────────────────────────────────────────
 
 _DOCS_HTML = """<!doctype html><html lang="en"><head><meta charset="utf-8">
-<title>mcp-gsc — documentation</title>
+<title>mcp-gsc — docs</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
-:root{--fg:#111;--muted:#666;--bg:#fff;--soft:#f6f6f7;--border:#e3e3e6;--accent:#0a7;--accent-bg:#e6f7f0}
-*{box-sizing:border-box}
-body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;max-width:880px;margin:0 auto;padding:48px 24px 96px;color:var(--fg);line-height:1.6;background:var(--bg)}
-header{margin-bottom:48px}
-header h1{margin:0 0 8px;font-size:2rem;letter-spacing:-.02em}
-header p.lead{color:var(--muted);margin:0;font-size:1.1rem}
-nav.toc{background:var(--soft);border:1px solid var(--border);border-radius:10px;padding:16px 20px;margin:32px 0}
-nav.toc h3{margin:0 0 8px;font-size:.8rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)}
-nav.toc ol{margin:0;padding-left:18px}
-nav.toc a{color:var(--fg);text-decoration:none}
-nav.toc a:hover{text-decoration:underline}
-h2{font-size:1.4rem;margin:48px 0 12px;letter-spacing:-.01em}
-h3{font-size:1.1rem;margin:24px 0 8px}
-hr{border:0;border-top:1px solid var(--border);margin:48px 0}
-code{background:var(--soft);padding:2px 6px;border-radius:4px;font-size:.92em;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
-pre{background:#1d1f21;color:#f8f8f2;padding:14px 16px;border-radius:8px;overflow:auto;font-size:.88rem;line-height:1.5}
-pre code{background:transparent;color:inherit;padding:0}
-a.btn{display:inline-block;background:var(--fg);color:#fff;padding:8px 14px;border-radius:6px;text-decoration:none;margin-right:6px;font-size:.92rem}
-a.btn.secondary{background:#eee;color:var(--fg)}
-.callout{background:var(--accent-bg);border-left:3px solid var(--accent);padding:12px 16px;border-radius:0 6px 6px 0;margin:16px 0;font-size:.95rem}
-.warn{background:#fff7e6;border-left-color:#d97706}
-.diagram{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;align-items:center;margin:24px 0;padding:24px 12px;background:var(--soft);border:1px solid var(--border);border-radius:10px;font-size:.85rem}
-.diagram .box{background:#fff;border:1px solid var(--border);border-radius:8px;padding:14px 8px;text-align:center;grid-column:span 1}
-.diagram .box.span2{grid-column:span 2}
-.diagram .box .icon{font-size:1.6rem;line-height:1}
-.diagram .box .label{font-weight:600;margin-top:6px}
-.diagram .box .sub{color:var(--muted);font-size:.78rem;margin-top:2px}
-.diagram .arrow{text-align:center;color:var(--muted);font-size:1.4rem}
-.diagram .box.accent{background:#111;color:#fff;border-color:#111}
-.diagram .box.accent .sub{color:#bbb}
-table{width:100%;border-collapse:collapse;margin:12px 0;font-size:.93rem}
-th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:top}
-th{background:var(--soft);font-weight:600}
-.steps{counter-reset:step;list-style:none;padding:0;margin:24px 0}
-.steps>li{counter-increment:step;position:relative;padding:18px 18px 18px 60px;border:1px solid var(--border);border-radius:10px;margin-bottom:12px;background:#fff}
-.steps>li::before{content:counter(step);position:absolute;left:18px;top:18px;width:30px;height:30px;border-radius:50%;background:var(--fg);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:.95rem}
-.steps>li h3{margin:0 0 6px;font-size:1.05rem}
-.steps>li p{margin:6px 0}
-.kbd{background:#fff;border:1px solid var(--border);border-bottom-width:2px;padding:1px 6px;border-radius:4px;font-family:inherit;font-size:.85em}
-footer{margin-top:64px;padding-top:24px;border-top:1px solid var(--border);color:var(--muted);font-size:.9rem}
-@media (max-width:640px){.diagram{grid-template-columns:1fr;gap:4px}.diagram .arrow{transform:rotate(90deg);margin:0}.diagram .box.span2{grid-column:span 1}}
+body{font-family:system-ui,sans-serif;max-width:640px;margin:0 auto;padding:48px 24px;color:#111;line-height:1.6}
+h1{margin:0 0 8px;font-size:1.6rem}
+h2{margin:32px 0 8px;font-size:1.05rem}
+p{margin:8px 0}
+.lead{color:#666;margin:0 0 24px}
+ol{padding-left:20px}
+ol li{margin:10px 0}
+code{background:#f3f3f3;padding:1px 6px;border-radius:4px;font-size:.92em}
+pre{background:#1d1f21;color:#f8f8f2;padding:12px 14px;border-radius:6px;overflow:auto;font-size:.85rem;margin:8px 0}
+a.btn{display:inline-block;background:#111;color:#fff;padding:6px 12px;border-radius:5px;text-decoration:none;font-size:.9rem;margin-right:6px}
+a.btn.s{background:#eee;color:#111}
 </style></head><body>
 
-<header>
-  <h1>mcp-gsc</h1>
-  <p class="lead">Bring Google Search Console data into Claude conversations across your organization.</p>
-  <p style="margin-top:16px"><a class="btn" href="/dashboard">Dashboard</a><a class="btn secondary" href="/api/oauth/start">Link an account</a></p>
-</header>
+<h1>mcp-gsc</h1>
+<p class="lead">Use Google Search Console from a Claude org chat.</p>
+<p><a class="btn" href="/dashboard">Dashboard</a><a class="btn s" href="/api/oauth/start">Link a Google account</a></p>
 
-<nav class="toc">
-  <h3>On this page</h3>
-  <ol>
-    <li><a href="#what">What this is</a></li>
-    <li><a href="#how">How it works</a></li>
-    <li><a href="#setup">Setup in 3 steps</a></li>
-    <li><a href="#example">A worked example</a></li>
-    <li><a href="#tools">Tool reference</a></li>
-    <li><a href="#troubleshoot">Troubleshooting</a></li>
-  </ol>
-</nav>
-
-<h2 id="what">What this is</h2>
-<p>This is a remote <strong>Model Context Protocol</strong> server that lets anyone in your Claude organization
-query Google Search Console — top queries, indexing status, sitemaps, performance trends — directly from a chat,
-without ever leaving Claude. It's a single endpoint your org admins register once as a <em>custom connector</em>.</p>
-
-<p>The server holds OAuth tokens for one or more Google accounts in a shared pool. Anyone in the org can ask
-about any property the linked accounts have access to. New Google accounts can be added by anyone with the
-admin token, no redeploy needed.</p>
-
-<h2 id="how">How it works</h2>
-
-<div class="diagram" aria-label="Architecture diagram">
-  <div class="box"><div class="icon">&#x1F464;</div><div class="label">You</div><div class="sub">in a Claude chat</div></div>
-  <div class="arrow">&rarr;</div>
-  <div class="box"><div class="icon">&#x1F916;</div><div class="label">Claude</div><div class="sub">org connector</div></div>
-  <div class="arrow">&rarr;</div>
-  <div class="box accent span2"><div class="icon">&#x2699;&#xFE0F;</div><div class="label">mcp-gsc</div><div class="sub">this server</div></div>
-  <div class="arrow">&rarr;</div>
-  <div class="box"><div class="icon">&#x1F50D;</div><div class="label">Google</div><div class="sub">Search Console</div></div>
-</div>
-
-<p>Two separate authentication layers run side by side:</p>
-<table>
-  <thead><tr><th>Layer</th><th>Who authenticates</th><th>How</th></tr></thead>
-  <tbody>
-    <tr><td><strong>Claude &rarr; mcp-gsc</strong></td><td>Your Claude organization</td>
-      <td>OAuth 2.0 + PKCE (set up once by an org admin), gated on first use by the operator's <code>MCP_BEARER_TOKEN</code>. Each Claude session gets a 1-hour access token.</td></tr>
-    <tr><td><strong>mcp-gsc &rarr; Google</strong></td><td>The Google account owner</td>
-      <td>Standard Google OAuth consent. Refresh tokens are stored in Vercel's Redis (Upstash); they're shared across all org users so anyone can query data for any linked account.</td></tr>
-  </tbody>
-</table>
-
-<div class="callout warn">
-  <strong>Privacy note.</strong> Once a Google account is linked, every Claude user in the org can query GSC
-  data for that account's properties. Don't link accounts whose data shouldn't be visible org-wide.
-</div>
-
-<h2 id="setup">Setup in 3 steps</h2>
-
-<ol class="steps">
-  <li>
-    <h3>Open the dashboard and link Google accounts</h3>
-    <p>Visit <a href="/dashboard">/dashboard</a>. You'll be asked for the admin token (the
-    <code>MCP_BEARER_TOKEN</code> set in Vercel). Once in, click <em>+&nbsp;Link another account</em>
-    to start the Google consent flow. After approving, the dashboard lists every property that account can access in
-    Search Console along with the permission level (<code>siteOwner</code>, <code>siteFullUser</code>, etc.).</p>
-    <p>Repeat for each Google account you want available to Claude.</p>
-  </li>
-  <li>
-    <h3>Add the MCP connector to your Claude organization</h3>
-    <p>In Claude.ai &rarr; <em>Settings &rarr; Connectors &rarr; Add custom connector</em> (org admin):</p>
-    <table>
-      <tr><th>Name</th><td>Google Search Console (or anything you like)</td></tr>
-      <tr><th>URL</th><td><code>https://&lt;your-domain&gt;/mcp</code></td></tr>
-      <tr><th>Authentication</th><td>Leave on the default (OAuth). Claude auto-discovers our endpoints from <code>/.well-known/oauth-authorization-server</code>; you don't need to fill in client ID or secret.</td></tr>
-    </table>
-    <p>When you click <em>Connect</em> the first time, Claude opens a consent page on this server. Paste your <code>MCP_BEARER_TOKEN</code> there, click <em>Approve</em>. From then on, anyone you've authorized in your Claude org can use the connector.</p>
-  </li>
-  <li>
-    <h3>Use it from any chat</h3>
-    <p>Start a chat with the connector enabled and just ask. Claude will pick the right tool and call it.</p>
-    <p>If a tool needs a specific Google account, mention it: <em>&ldquo;use the gcosta@example.com account&rdquo;</em>. Otherwise the default (first-linked) account is used.</p>
-  </li>
+<h2>Setup</h2>
+<ol>
+  <li><strong>Link Google accounts.</strong> Open <a href="/dashboard">/dashboard</a>, enter the admin token (the <code>MCP_BEARER_TOKEN</code> from Vercel), then click <em>Link another account</em> and approve in Google. Repeat for each account you want available.</li>
+  <li><strong>Add the connector in Claude.</strong> In your org's <em>Settings → Connectors → Add custom connector</em>, set the URL to <code>https://&lt;this-domain&gt;/mcp</code> and leave authentication on the default. On first connect, Claude opens a consent page here — paste the same admin token and approve.</li>
+  <li><strong>Use it.</strong> Start a chat with the connector enabled and ask. Mention an email if you want a specific account; otherwise the default linked account is used.</li>
 </ol>
 
-<h2 id="example">A worked example</h2>
-
-<p>Suppose you've linked one Google account and your dashboard shows three properties. In Claude, you ask:</p>
-
-<pre><code>Pull the top 10 queries for sc-domain:example.com over the last 28 days.
-Sort by clicks descending.</code></pre>
-
-<p>Claude calls the <code>get_search_analytics</code> tool with these arguments:</p>
-
+<h2>Example</h2>
+<p>Ask:</p>
+<pre><code>Top 10 queries for sc-domain:example.com over the last 28 days.</code></pre>
+<p>Claude calls <code>get_search_analytics</code> and gets back JSON like:</p>
 <pre><code>{
   "site_url": "sc-domain:example.com",
-  "days": 28,
-  "dimensions": "query",
-  "row_limit": 10
-}</code></pre>
-
-<p>The MCP server fetches a fresh access token for the linked Google account, queries the Search Analytics API, and returns:</p>
-
-<pre><code>{
-  "site_url": "sc-domain:example.com",
-  "date_range": { "start": "2026-04-01", "end": "2026-04-29", "days": 28 },
-  "dimensions": ["query"],
-  "row_count": 10,
   "rows": [
-    { "query": "example brand",          "clicks": 4821, "impressions": 41203, "ctr": 0.117, "position":  2.3 },
-    { "query": "example reviews",        "clicks": 1192, "impressions": 18004, "ctr": 0.066, "position":  4.1 },
-    { "query": "example pricing",        "clicks":  874, "impressions": 11488, "ctr": 0.076, "position":  3.7 },
-    { "query": "example vs competitor",  "clicks":  651, "impressions":  9322, "ctr": 0.070, "position":  5.2 },
-    { "query": "example login",          "clicks":  544, "impressions":  6011, "ctr": 0.090, "position":  1.8 },
-    { "query": "example api docs",       "clicks":  421, "impressions":  7234, "ctr": 0.058, "position":  6.4 },
-    { "query": "how does example work",  "clicks":  398, "impressions": 12005, "ctr": 0.033, "position":  8.9 },
-    { "query": "example free trial",     "clicks":  366, "impressions":  4982, "ctr": 0.073, "position":  3.2 },
-    { "query": "example alternatives",   "clicks":  311, "impressions":  9711, "ctr": 0.032, "position":  9.1 },
-    { "query": "example support",        "clicks":  287, "impressions":  3140, "ctr": 0.091, "position":  2.0 }
+    { "query": "example brand",   "clicks": 4821, "impressions": 41203, "ctr": 0.117, "position": 2.3 },
+    { "query": "example reviews", "clicks": 1192, "impressions": 18004, "ctr": 0.066, "position": 4.1 }
   ]
 }</code></pre>
+<p>Claude summarizes it for you. Drill in by asking follow-ups (&ldquo;which page ranks for X?&rdquo;, &ldquo;compare last 28 vs prior 28 days&rdquo;).</p>
 
-<p>Claude turns that into a summary &mdash; biggest movers, CTR outliers, opportunity queries &mdash; without you ever opening the Search Console UI. From there you can drill in: <em>&ldquo;for the &lsquo;example api docs&rsquo; query, which page is ranking?&rdquo;</em> calls <code>get_advanced_search_analytics</code> with a query filter, and so on.</p>
-
-<h2 id="tools">Tool reference</h2>
-
-<p>22 tools available, grouped here by purpose:</p>
-
-<table>
-  <thead><tr><th>Group</th><th>Tools</th></tr></thead>
-  <tbody>
-    <tr><td>Discovery</td><td><code>get_capabilities</code>, <code>list_properties</code>, <code>list_linked_accounts</code>, <code>get_site_details</code></td></tr>
-    <tr><td>Analytics</td><td><code>get_search_analytics</code>, <code>get_performance_overview</code>, <code>compare_search_periods</code>, <code>get_search_by_page_query</code>, <code>get_advanced_search_analytics</code></td></tr>
-    <tr><td>URL inspection</td><td><code>inspect_url_enhanced</code>, <code>batch_url_inspection</code>, <code>check_indexing_issues</code></td></tr>
-    <tr><td>Sitemaps</td><td><code>get_sitemaps</code>, <code>list_sitemaps_enhanced</code>, <code>get_sitemap_details</code>, <code>submit_sitemap</code>, <code>delete_sitemap</code>, <code>manage_sitemaps</code></td></tr>
-    <tr><td>Account / safety</td><td><code>add_site</code>, <code>delete_site</code>, <code>reauthenticate</code></td></tr>
-  </tbody>
-</table>
-
-<p>Every tool accepts an optional <code>account</code> argument to pin the call to a specific linked Google email. <code>add_site</code>, <code>delete_site</code>, and <code>delete_sitemap</code> are disabled unless <code>GSC_ALLOW_DESTRUCTIVE=true</code> is set on the server.</p>
-
-<h2 id="troubleshoot">Troubleshooting</h2>
-
-<table>
-  <thead><tr><th>Symptom</th><th>Likely cause &amp; fix</th></tr></thead>
-  <tbody>
-    <tr><td>Connector adds, but no tools appear in Claude</td>
-      <td>The server returned 401 to the initial <code>tools/list</code>. Re-open the connector settings and reconnect — Claude's old session token may have expired (1h TTL). If it persists, regenerate <code>MCP_BEARER_TOKEN</code> and re-authorize.</td></tr>
-    <tr><td><code>(invalid_grant) Missing code verifier</code> on Google consent</td>
-      <td>PKCE state didn't survive between the start and callback. Usually transient — try the link flow again from <a href="/api/oauth/start">/api/oauth/start</a>.</td></tr>
-    <tr><td>Tool returns &ldquo;No Google accounts are linked&rdquo;</td>
-      <td>Empty pool. Visit <a href="/api/oauth/start">/api/oauth/start</a> and authorize at least one account.</td></tr>
-    <tr><td>Tool returns 404 for a property you can see in GSC</td>
-      <td>The <code>site_url</code> string must match GSC <em>exactly</em> &mdash; trailing slashes, http vs https, and the <code>sc-domain:</code> prefix all matter. Call <code>list_properties</code> first and copy the value.</td></tr>
-    <tr><td>Claude says &ldquo;Denied&rdquo; despite valid setup</td>
-      <td>Check the raw tool output (expand the call in the chat). The dashboard runs the same Google API call &mdash; if it shows properties there, the server is fine and Claude is paraphrasing something else.</td></tr>
-  </tbody>
-</table>
-
-<footer>
-  <p>Open source: MIT-licensed FastMCP server, Python 3.12, deployed on Vercel with Marketplace Redis.
-  See the <a href="https://github.com/AminForou/mcp-gsc">upstream repo</a> for the tool implementations,
-  or this fork for the Vercel deployment layer.</p>
-</footer>
+<h2>Notes</h2>
+<p>Linked Google accounts are <strong>shared</strong> across the whole org — anyone in the connector can query data for any linked account. Don't link accounts whose data shouldn't be org-wide.</p>
+<p>22 tools available (search analytics, URL inspection, sitemaps, etc.). All accept an optional <code>account</code> argument.</p>
 
 </body></html>"""
 
