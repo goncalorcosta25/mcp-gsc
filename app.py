@@ -504,28 +504,52 @@ _DOCS_HTML = """<!doctype html><html lang="en"><head><meta charset="utf-8">
 <title>mcp-gsc — docs</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
-body{font-family:system-ui,sans-serif;max-width:640px;margin:0 auto;padding:48px 24px;color:#111;line-height:1.6}
+body{font-family:system-ui,sans-serif;max-width:680px;margin:0 auto;padding:40px 24px 64px;color:#111;line-height:1.6}
 h1{margin:0 0 8px;font-size:1.6rem}
-h2{margin:32px 0 8px;font-size:1.05rem}
+h2{margin:28px 0 8px;font-size:1.05rem}
 p{margin:8px 0}
-.lead{color:#666;margin:0 0 24px}
+.lead{color:#666;margin:0 0 20px}
 ol{padding-left:20px}
 ol li{margin:10px 0}
-code{background:#f3f3f3;padding:1px 6px;border-radius:4px;font-size:.92em}
+code{background:#f3f3f3;padding:1px 6px;border-radius:4px;font-size:.92em;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
 pre{background:#1d1f21;color:#f8f8f2;padding:12px 14px;border-radius:6px;overflow:auto;font-size:.85rem;margin:8px 0}
+pre code{background:transparent;color:inherit;padding:0;font-size:inherit}
 a.btn{display:inline-block;background:#111;color:#fff;padding:6px 12px;border-radius:5px;text-decoration:none;font-size:.9rem;margin-right:6px}
 a.btn.s{background:#eee;color:#111}
+nav.tabs{display:flex;gap:4px;border-bottom:1px solid #e3e3e6;margin:24px 0 0}
+nav.tabs label{padding:8px 14px;cursor:pointer;color:#666;border-bottom:2px solid transparent;margin-bottom:-1px;font-size:.95rem}
+input[name=tab]{display:none}
+.panel{display:none;padding-top:8px}
+#t1:checked~.body .p1,#t2:checked~.body .p2{display:block}
+#t1:checked~nav.tabs label[for=t1],#t2:checked~nav.tabs label[for=t2]{color:#111;border-bottom-color:#111;font-weight:600}
+table.tools{width:100%;border-collapse:collapse;margin:8px 0;font-size:.92rem}
+table.tools td{padding:6px 8px;border-bottom:1px solid #eee;vertical-align:top}
+table.tools td:first-child{white-space:nowrap;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.85rem;color:#0366d6}
+table.tools tr.group td{background:#fafafa;font-weight:600;font-family:inherit;color:#666;font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;padding-top:14px}
+.muted{color:#888;font-size:.85rem}
 </style></head><body>
+
+<input type="radio" name="tab" id="t1" checked>
+<input type="radio" name="tab" id="t2">
 
 <h1>mcp-gsc</h1>
 <p class="lead">Use Google Search Console from a Claude org chat.</p>
 <p><a class="btn" href="/dashboard">Dashboard</a><a class="btn s" href="/api/oauth/start">Link a Google account</a></p>
 
-<h2>Setup</h2>
+<nav class="tabs">
+  <label for="t1">Get started</label>
+  <label for="t2">Tools</label>
+</nav>
+
+<div class="body">
+
+<section class="panel p1">
+<h2>Connect it to your Claude</h2>
 <ol>
-  <li><strong>Link Google accounts.</strong> Open <a href="/dashboard">/dashboard</a>, enter the admin token (the <code>MCP_BEARER_TOKEN</code> from Vercel), then click <em>Link another account</em> and approve in Google. Repeat for each account you want available.</li>
-  <li><strong>Add the connector in Claude.</strong> In your org's <em>Settings → Connectors → Add custom connector</em>, set the URL to <code>https://&lt;this-domain&gt;/mcp</code> and leave authentication on the default. On first connect, Claude opens a consent page here — paste the same admin token and approve.</li>
-  <li><strong>Use it.</strong> Start a chat with the connector enabled and ask. Mention an email if you want a specific account; otherwise the default linked account is used.</li>
+  <li><strong>Get the access token</strong> from whoever set up this server. You'll paste it once during connector setup.</li>
+  <li><strong>Add the connector.</strong> In Claude → your <em>Settings → Connectors → Add custom connector</em>, set the URL to <code>https://&lt;this-domain&gt;/mcp</code>. Leave authentication on the default — Claude auto-discovers the rest.</li>
+  <li><strong>Approve once.</strong> Click <em>Connect</em>. Claude opens a consent page on this server; paste the access token from step 1 and approve. That's it — the connector is now wired into all your chats.</li>
+  <li><strong>Use it.</strong> Start a chat and ask in plain English. If you want a specific linked Google account, mention the email; otherwise the default is used.</li>
 </ol>
 
 <h2>Example</h2>
@@ -539,11 +563,54 @@ a.btn.s{background:#eee;color:#111}
     { "query": "example reviews", "clicks": 1192, "impressions": 18004, "ctr": 0.066, "position": 4.1 }
   ]
 }</code></pre>
-<p>Claude summarizes it for you. Drill in by asking follow-ups (&ldquo;which page ranks for X?&rdquo;, &ldquo;compare last 28 vs prior 28 days&rdquo;).</p>
+<p>Claude summarizes it. Drill in by asking follow-ups ("which page ranks for X?", "compare last 28 vs prior 28 days").</p>
 
-<h2>Notes</h2>
-<p>Linked Google accounts are <strong>shared</strong> across the whole org — anyone in the connector can query data for any linked account. Don't link accounts whose data shouldn't be org-wide.</p>
-<p>22 tools available (search analytics, URL inspection, sitemaps, etc.). All accept an optional <code>account</code> argument.</p>
+<h2>Add a new Google account to the pool</h2>
+<p>Anyone with the access token can do this — no admin required. Open <a href="/dashboard">/dashboard</a>, paste the token, then click <em>+&nbsp;Link another account</em> and approve in Google. The new account becomes available to everyone in the org immediately.</p>
+
+<h2>Heads up</h2>
+<p>Linked Google accounts are <strong>shared</strong>. Anyone using the connector can query Search Console data for any linked account. Don't link a Google account whose data shouldn't be org-wide.</p>
+</section>
+
+<section class="panel p2">
+<h2>22 tools</h2>
+<p class="muted">Every tool accepts an optional <code>account</code> argument to pin the call to a specific linked Google email. Destructive tools are disabled unless the server has <code>GSC_ALLOW_DESTRUCTIVE=true</code>.</p>
+<table class="tools">
+<tr class="group"><td colspan="2">Discovery</td></tr>
+<tr><td>get_capabilities</td><td>Lists every tool grouped by category and shows current auth status. Call first if unsure what's available.</td></tr>
+<tr><td>list_properties</td><td>All GSC properties the linked account can see, with permission level.</td></tr>
+<tr><td>list_linked_accounts</td><td>The pool of Google accounts linked to this server and which one is the default.</td></tr>
+<tr><td>get_site_details</td><td>Verification, ownership, and permission info for a single property.</td></tr>
+
+<tr class="group"><td colspan="2">Search analytics</td></tr>
+<tr><td>get_search_analytics</td><td>Top queries / pages with clicks, impressions, CTR, position over a date range. Group by query, page, device, country, or date.</td></tr>
+<tr><td>get_performance_overview</td><td>Property-level totals plus a daily trend for the period.</td></tr>
+<tr><td>compare_search_periods</td><td>Diffs metrics between two date ranges so you can see what moved.</td></tr>
+<tr><td>get_search_by_page_query</td><td>Queries driving traffic to one specific page URL.</td></tr>
+<tr><td>get_advanced_search_analytics</td><td>Same data as get_search_analytics with full filtering, pagination, sorting, and search-type selection (web / image / video / news / discover).</td></tr>
+
+<tr class="group"><td colspan="2">URL inspection</td></tr>
+<tr><td>inspect_url_enhanced</td><td>Full crawl + index + rich-results status for one URL.</td></tr>
+<tr><td>batch_url_inspection</td><td>Inspect up to 10 URLs in one call.</td></tr>
+<tr><td>check_indexing_issues</td><td>Bucketize a list of URLs into not-indexed / canonical-issues / robots-blocked / fetch-issues / indexed.</td></tr>
+
+<tr class="group"><td colspan="2">Sitemaps</td></tr>
+<tr><td>get_sitemaps</td><td>Plain list of submitted sitemaps for a property.</td></tr>
+<tr><td>list_sitemaps_enhanced</td><td>Detailed sitemap list with last submitted/downloaded times, type, and error/warning counts.</td></tr>
+<tr><td>get_sitemap_details</td><td>Drill into one sitemap (status, content breakdown, errors).</td></tr>
+<tr><td>submit_sitemap</td><td>Submit (or resubmit) a sitemap URL to Google.</td></tr>
+<tr><td>delete_sitemap</td><td>Unsubmit a sitemap. <span class="muted">Destructive — gated.</span></td></tr>
+<tr><td>manage_sitemaps</td><td>All-in-one wrapper: list / details / submit / delete via an <code>action</code> argument.</td></tr>
+
+<tr class="group"><td colspan="2">Account &amp; safety</td></tr>
+<tr><td>add_site</td><td>Add a new property to GSC. <span class="muted">Destructive — gated.</span></td></tr>
+<tr><td>delete_site</td><td>Remove a property from GSC. <span class="muted">Destructive — gated.</span></td></tr>
+<tr><td>reauthenticate</td><td>Returns the URL to link a new Google account to the shared pool.</td></tr>
+<tr><td>get_creator_info</td><td>About the upstream tool author (Amin Foroutan).</td></tr>
+</table>
+</section>
+
+</div>
 
 </body></html>"""
 
