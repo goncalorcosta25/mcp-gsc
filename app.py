@@ -38,7 +38,7 @@ from starlette.responses import (  # noqa: E402
 from starlette.routing import Route  # noqa: E402
 
 from gsc_server import mcp  # noqa: E402
-from lib import oauth_web, token_store  # noqa: E402
+from lib import oauth_server, oauth_web, token_store  # noqa: E402
 from lib.auth_guard import bearer_required  # noqa: E402
 
 
@@ -135,6 +135,206 @@ async def accounts(request: Request):
         })
     except Exception as exc:
         return PlainTextResponse(f"Error: {exc}", status_code=500)
+
+
+# ── OAuth 2.0 endpoints (Claude's custom MCP connector flow) ──────────────────
+
+def _origin(request: Request) -> str:
+    host = request.headers.get("host") or "localhost"
+    scheme = request.url.scheme or "https"
+    if host.endswith(".vercel.app"):
+        scheme = "https"
+    return f"{scheme}://{host}"
+
+
+async def oauth_authorization_server_metadata(request: Request):
+    base = _origin(request)
+    return JSONResponse({
+        "issuer": base,
+        "authorization_endpoint": f"{base}/authorize",
+        "token_endpoint": f"{base}/token",
+        "registration_endpoint": f"{base}/register",
+        "scopes_supported": ["mcp"],
+        "response_types_supported": ["code"],
+        "grant_types_supported": ["authorization_code"],
+        "code_challenge_methods_supported": ["S256"],
+        "token_endpoint_auth_methods_supported": ["none"],
+    })
+
+
+async def oauth_protected_resource_metadata(request: Request):
+    base = _origin(request)
+    return JSONResponse({
+        "resource": f"{base}/mcp",
+        "authorization_servers": [base],
+        "bearer_methods_supported": ["header"],
+    })
+
+
+async def oauth_register(request: Request):
+    """RFC 7591 Dynamic Client Registration. Accept any registration."""
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    redirect_uris = body.get("redirect_uris") or []
+    # Issue a random client_id; we don't persist registrations because the
+    # actual gating happens on /authorize via the operator's bearer token.
+    client_id = secrets.token_urlsafe(24)
+    return JSONResponse({
+        "client_id": client_id,
+        "client_id_issued_at": 0,
+        "redirect_uris": redirect_uris,
+        "grant_types": ["authorization_code"],
+        "response_types": ["code"],
+        "token_endpoint_auth_method": "none",
+    })
+
+
+_CONSENT_HTML = """<!doctype html><html><head><meta charset="utf-8">
+<title>mcp-gsc — authorize Claude</title>
+<style>body{{font-family:system-ui,sans-serif;max-width:480px;margin:80px auto;padding:0 16px;color:#222;line-height:1.55}}
+.card{{border:1px solid #e2e2e2;border-radius:10px;padding:24px;background:#fafafa;margin-top:24px}}
+input{{width:100%;padding:10px;font-family:ui-monospace,monospace;border:1px solid #ccc;border-radius:6px;box-sizing:border-box}}
+button{{margin-top:12px;background:#111;color:#fff;padding:10px 16px;border:0;border-radius:6px;cursor:pointer;font-size:1rem}}
+.err{{color:#b00;background:#fff0f0;border:1px solid #fbb;padding:10px 12px;border-radius:6px;margin-top:12px;font-size:.9rem}}
+.muted{{color:#666;font-size:.85rem;margin-top:14px}}
+code{{background:#f3f3f3;padding:2px 6px;border-radius:4px;font-size:.9em}}</style>
+</head><body>
+<h1>Authorize Claude to use mcp-gsc</h1>
+<p>Claude is requesting access to your Google Search Console MCP server.</p>
+<div class="card">
+  <p>Redirect URI: <code>{redirect_uri}</code></p>
+  <p>Confirm by entering the <code>MCP_BEARER_TOKEN</code> set in Vercel:</p>
+  {error}
+  <form method="POST" action="/authorize">
+    <input type="hidden" name="response_type" value="{response_type}">
+    <input type="hidden" name="client_id" value="{client_id}">
+    <input type="hidden" name="redirect_uri" value="{redirect_uri}">
+    <input type="hidden" name="code_challenge" value="{code_challenge}">
+    <input type="hidden" name="code_challenge_method" value="{code_challenge_method}">
+    <input type="hidden" name="state" value="{state}">
+    <input type="hidden" name="scope" value="{scope}">
+    <input type="password" name="admin_token" placeholder="Bearer token" autofocus required>
+    <button type="submit">Approve</button>
+  </form>
+</div>
+<p class="muted">This step is one-time per Claude organization. The bearer
+token is the same value you configured in Vercel as <code>MCP_BEARER_TOKEN</code>
+and registered in the connector form.</p>
+</body></html>"""
+
+
+def _render_consent(params: dict, error: str = "") -> str:
+    err = f'<p class="err">{html.escape(error)}</p>' if error else ""
+    return _CONSENT_HTML.format(
+        redirect_uri=html.escape(params.get("redirect_uri", "")),
+        response_type=html.escape(params.get("response_type", "code")),
+        client_id=html.escape(params.get("client_id", "")),
+        code_challenge=html.escape(params.get("code_challenge", "")),
+        code_challenge_method=html.escape(params.get("code_challenge_method", "S256")),
+        state=html.escape(params.get("state", "")),
+        scope=html.escape(params.get("scope", "")),
+        error=err,
+    )
+
+
+def _redirect_with_error(redirect_uri: str, state: str, error: str, description: str = "") -> RedirectResponse:
+    from urllib.parse import urlencode
+    sep = "&" if "?" in redirect_uri else "?"
+    qs = urlencode({"error": error, "error_description": description, "state": state})
+    return RedirectResponse(redirect_uri + sep + qs, status_code=302)
+
+
+async def authorize(request: Request):
+    if request.method == "GET":
+        params = dict(request.query_params)
+    else:
+        params = dict(await request.form())
+
+    response_type = params.get("response_type", "")
+    redirect_uri = params.get("redirect_uri", "")
+    code_challenge = params.get("code_challenge", "")
+    code_challenge_method = params.get("code_challenge_method", "")
+    state = params.get("state", "")
+    client_id = params.get("client_id", "")
+    scope = params.get("scope", "")
+
+    # Hard-fail validations that we cannot redirect for (no usable redirect_uri).
+    if not redirect_uri or not oauth_server._allowed_redirect(redirect_uri):
+        return PlainTextResponse(
+            "invalid_request: redirect_uri is missing or not allowed. "
+            "Only Claude's MCP callback URLs are permitted.",
+            status_code=400,
+        )
+    if response_type != "code":
+        return _redirect_with_error(redirect_uri, state, "unsupported_response_type",
+                                    "only response_type=code is supported")
+    if code_challenge_method != "S256" or not code_challenge:
+        return _redirect_with_error(redirect_uri, state, "invalid_request",
+                                    "PKCE S256 code_challenge is required")
+
+    if request.method == "GET":
+        return HTMLResponse(_render_consent(params))
+
+    # POST: verify operator's bearer token, then issue auth code.
+    expected = os.environ.get("MCP_BEARER_TOKEN")
+    admin_token = params.get("admin_token", "")
+    if not expected:
+        return PlainTextResponse("MCP_BEARER_TOKEN is not configured.", status_code=503)
+    if not admin_token or not hmac.compare_digest(admin_token, expected):
+        return HTMLResponse(_render_consent(params, error="Invalid token. Try again."),
+                            status_code=401)
+
+    code = oauth_server.issue_code(
+        redirect_uri=redirect_uri,
+        code_challenge=code_challenge,
+        code_challenge_method=code_challenge_method,
+        client_id=client_id,
+        scope=scope,
+    )
+    from urllib.parse import urlencode
+    sep = "&" if "?" in redirect_uri else "?"
+    qs = urlencode({"code": code, "state": state})
+    return RedirectResponse(redirect_uri + sep + qs, status_code=302)
+
+
+async def token_endpoint(request: Request):
+    form = await request.form()
+    grant_type = form.get("grant_type", "")
+    code = form.get("code", "")
+    code_verifier = form.get("code_verifier", "")
+    redirect_uri = form.get("redirect_uri", "")
+    client_id = form.get("client_id", "")
+
+    if grant_type != "authorization_code":
+        return JSONResponse({"error": "unsupported_grant_type"}, status_code=400)
+    if not code or not code_verifier:
+        return JSONResponse({"error": "invalid_request",
+                             "error_description": "code and code_verifier are required"},
+                            status_code=400)
+
+    bound = oauth_server.consume_code(code)
+    if bound is None:
+        return JSONResponse({"error": "invalid_grant",
+                             "error_description": "code is invalid or expired"},
+                            status_code=400)
+    if redirect_uri and bound.get("redirect_uri") != redirect_uri:
+        return JSONResponse({"error": "invalid_grant",
+                             "error_description": "redirect_uri mismatch"},
+                            status_code=400)
+    if not oauth_server._pkce_matches(code_verifier, bound.get("code_challenge", "")):
+        return JSONResponse({"error": "invalid_grant",
+                             "error_description": "PKCE verifier does not match challenge"},
+                            status_code=400)
+
+    access_token = oauth_server.issue_access_token(client_id=client_id)
+    return JSONResponse({
+        "access_token": access_token,
+        "token_type": "Bearer",
+        "expires_in": oauth_server.ACCESS_TOKEN_TTL,
+        "scope": bound.get("scope", ""),
+    })
 
 
 # ── Dashboard ──────────────────────────────────────────────────────────────────
@@ -307,11 +507,22 @@ _oauth_app = Starlette(routes=[
     Route("/api/oauth/start", oauth_start, methods=["GET"]),
     Route("/api/oauth/callback", oauth_callback, methods=["GET"]),
     Route("/api/accounts", accounts, methods=["GET"]),
+    # Claude's custom-MCP-connector OAuth flow
+    Route("/.well-known/oauth-authorization-server",
+          oauth_authorization_server_metadata, methods=["GET"]),
+    Route("/.well-known/oauth-protected-resource",
+          oauth_protected_resource_metadata, methods=["GET"]),
+    Route("/register", oauth_register, methods=["POST"]),
+    Route("/authorize", authorize, methods=["GET", "POST"]),
+    Route("/token", token_endpoint, methods=["POST"]),
 ])
 
 _HANDLED_PATHS = frozenset([
     "/", "/dashboard",
     "/api/oauth/start", "/api/oauth/callback", "/api/accounts",
+    "/.well-known/oauth-authorization-server",
+    "/.well-known/oauth-protected-resource",
+    "/register", "/authorize", "/token",
 ])
 
 
