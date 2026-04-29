@@ -41,14 +41,15 @@ class handler(BaseHTTPRequestHandler):
         if not code or not state:
             return self._send(400, "Missing 'code' or 'state' query parameter.")
 
-        if token_store.pop_oauth_state(state) is None:
+        code_verifier = token_store.pop_oauth_state(state)
+        if code_verifier is None:
             return self._send(
                 400,
                 "Invalid or expired OAuth state. Restart the flow at /api/oauth/start.",
             )
 
         try:
-            creds = oauth_web.exchange_code(code)
+            creds = oauth_web.exchange_code(code, code_verifier=code_verifier)
             email = oauth_web.userinfo_email(creds)
         except Exception as exc:
             return self._send(500, f"Token exchange failed: {exc}")

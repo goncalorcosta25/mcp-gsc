@@ -21,8 +21,8 @@ class handler(BaseHTTPRequestHandler):
     def do_GET(self):  # noqa: N802 - signature required by BaseHTTPRequestHandler
         try:
             state = secrets.token_urlsafe(32)
-            token_store.put_oauth_state(state)
-            url = oauth_web.build_authorize_url(state)
+            url, code_verifier = oauth_web.build_authorize_url(state)
+            token_store.put_oauth_state(state, code_verifier)
         except Exception as exc:  # surface configuration errors clearly
             body = f"OAuth start failed: {exc}".encode("utf-8")
             self.send_response(500)

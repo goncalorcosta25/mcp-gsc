@@ -58,8 +58,10 @@ _mcp_protected = bearer_required(_mcp_inner)
 async def oauth_start(request: Request):
     try:
         state = secrets.token_urlsafe(32)
-        token_store.put_oauth_state(state)
-        url = oauth_web.build_authorize_url(state)
+        url, code_verifier = oauth_web.build_authorize_url(state)
+        # Persist the PKCE verifier with the state so the callback (a separate
+        # serverless invocation with no shared memory) can complete the flow.
+        token_store.put_oauth_state(state, code_verifier)
         return RedirectResponse(url, status_code=302)
     except Exception as exc:
         return PlainTextResponse(f"OAuth start failed: {exc}", status_code=500)
@@ -87,13 +89,14 @@ async def oauth_callback(request: Request):
         return PlainTextResponse(f"Google returned an error: {error}", status_code=400)
     if not code or not state:
         return PlainTextResponse("Missing 'code' or 'state' query parameter.", status_code=400)
-    if token_store.pop_oauth_state(state) is None:
+    code_verifier = token_store.pop_oauth_state(state)
+    if code_verifier is None:
         return PlainTextResponse(
             "Invalid or expired OAuth state. Restart the flow at /api/oauth/start.",
             status_code=400,
         )
     try:
-        creds = oauth_web.exchange_code(code)
+        creds = oauth_web.exchange_code(code, code_verifier=code_verifier)
         email = oauth_web.userinfo_email(creds)
     except Exception as exc:
         return PlainTextResponse(f"Token exchange failed: {exc}", status_code=500)
